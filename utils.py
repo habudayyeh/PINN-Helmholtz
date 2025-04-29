@@ -8,6 +8,8 @@ from torchvision.utils import make_grid
 
 import modules
 
+PI = 3.14159265359
+
 def cond_mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -54,14 +56,15 @@ def gaussian(x, mu=[0, 0], sigma=1e-4, d=2):
     return torch.from_numpy(1 / np.sqrt(sigma ** d * (2 * np.pi) ** d) * np.exp(q / sigma)).float()
 
 class SingleHelmholtzSource(Dataset):
-    def __init__(self, sidelength, velocity='uniform', source_coords=[0., 0.]):
+    def __init__(self, sidelength, velocity='uniform', source_coords=[0., 0.], wavelength = 0.3):
         super().__init__()
         torch.manual_seed(0)
 
         self.sidelength = sidelength
         self.mgrid = get_mgrid(self.sidelength).detach()
         self.velocity = velocity
-        self.wavenumber = 20.
+        self.wavelength = wavelength
+        self.wavenumber = 2*PI/wavelength
 
         self.N_src_samples = 100
         self.sigma = 1e-4
@@ -135,6 +138,7 @@ class SingleHelmholtzSource(Dataset):
         return {'coords': coords}, {'source_boundary_values': boundary_values, 'gt': self.field,
                                     'squared_slowness': squared_slowness,
                                     'squared_slowness_grid': squared_slowness_grid,
+                                    'wavelength': self.wavelength,
                                     'wavenumber': self.wavenumber}
 
 
@@ -145,6 +149,7 @@ def helmholtz_pml(model_output, gt):
         rec_boundary_values = gt['rec_boundary_values']
 
     wavenumber = gt['wavenumber'].float()
+    wavelength = gt['wavelength'].float()
     x = model_output['model_in']  # (meta_batch_size, num_points, 2)
     y = model_output['model_out']  # (meta_batch_size, num_points, 2)
     squared_slowness = gt['squared_slowness'].repeat(1, 1, y.shape[-1] // 2)
@@ -167,10 +172,12 @@ def helmholtz_pml(model_output, gt):
     dudx1 = du[..., 0]
     dudx2 = du[..., 1]
 
-    a0 = 5.0
+
 
     # let pml extend from -1. to -1 + Lpml and 1 - Lpml to 1.0
-    Lpml = 0.5
+    Lpml = wavelength/2
+    a0 = 2.25 / Lpml
+
     dist_west = -torch.clamp(x[..., 0] + (1.0 - Lpml), max=0)
     dist_east = torch.clamp(x[..., 0] - (1.0 - Lpml), min=0)
     dist_south = -torch.clamp(x[..., 1] + (1.0 - Lpml), max=0)
