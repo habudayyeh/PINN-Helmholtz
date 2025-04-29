@@ -201,7 +201,11 @@ def helmholtz_pml(model_output, gt):
                                       diff_constraint_hom,
                                       torch.zeros_like(diff_constraint_hom))
     if full_waveform_inversion:
-        data_term = torch.where(rec_boundary_values != 0, y - rec_boundary_values, torch.Tensor([0.]).cuda())
+        if torch.cuda.is_available():
+            data_term = torch.where(rec_boundary_values != 0, y - rec_boundary_values, torch.Tensor([0.]).cuda())
+        else:
+            data_term = torch.where(rec_boundary_values != 0, y - rec_boundary_values, torch.Tensor([0.]))
+
     else:
         data_term = torch.Tensor([0.])
 
@@ -215,7 +219,8 @@ def helmholtz_pml(model_output, gt):
 
 def write_helmholtz_summary(model, model_input, gt, model_output, writer, total_steps, prefix='train_'):
     sl = 256
-    coords = get_mgrid(sl)[None,...].cuda()
+    coords = get_mgrid(sl)[None,...]
+    if torch.cuda.is_available(): coords=coords.cuda()
 
     def scale_percentile(pred, min_perc=1, max_perc=99):
         min = np.percentile(pred.cpu().numpy(),1)

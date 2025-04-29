@@ -5,7 +5,7 @@ sys.path.append( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) )
 import utils, modules, training
 
 from torch.utils.data import DataLoader
-
+from torch.cuda import is_available as cuda_available
 
 logging_root= './logs'
 experiment_name='test'
@@ -34,7 +34,8 @@ dataloader = DataLoader(dataset, shuffle=True, batch_size=batch_size, num_worker
 # Define the model.
 model = modules.SingleBVPNet(out_features=2, type=activation, mode=mode, final_layer_factor=1.)
 
-# model.cuda()
+if  cuda_available():
+    model.cuda()
 
 # Define the loss
 loss_fn = utils.helmholtz_pml
