@@ -117,6 +117,9 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                         with torch.no_grad():
                             val_losses = []
                             for (model_input, gt) in val_dataloader:
+                                if torch.cuda.is_available():
+                                    model_input = {key: value.cuda() for key, value in model_input.items()}
+                                    gt = {key: value.cuda() for key, value in gt.items()}
                                 model_output = model(model_input)
                                 val_loss = loss_fn(model_output, gt)
                                 val_losses.append(val_loss)
