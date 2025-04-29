@@ -15,13 +15,12 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
           summary_fn, val_dataloader=None, double_precision=False, clip_grad=False, use_lbfgs=False, loss_schedules=None):
 
     optim = torch.optim.Adam(lr=lr, params=model.parameters())
-
-    # copy settings from Raissi et al. (2019) and here 
+    # copy settings from Raissi et al. (2019) and here
     # https://github.com/maziarraissi/PINNs
     if use_lbfgs:
         optim = torch.optim.LBFGS(lr=lr, params=model.parameters(), max_iter=50000, max_eval=50000,
                                   history_size=50, line_search_fn='strong_wolfe')
-
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optim, 'min')
     if os.path.exists(model_dir):
         val = input("The model directory %s exists. Overwrite? (y/n)"%model_dir)
         if val == 'y':
@@ -123,6 +122,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                                 val_losses.append(val_loss)
 
                             # writer.add_scalar("val_loss", np.mean(val_losses), total_steps)
+                        scheduler.step(np.mean(val_losses))
                         model.train()
 
                 total_steps += 1
