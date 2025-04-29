@@ -114,15 +114,15 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                     if val_dataloader is not None:
                         print("Running validation set...")
                         model.eval()
-                        with torch.no_grad():
-                            val_losses = []
-                            for (model_input, gt) in val_dataloader:
-                                if torch.cuda.is_available():
-                                    model_input = {key: value.cuda() for key, value in model_input.items()}
-                                    gt = {key: value.cuda() for key, value in gt.items()}
-                                model_output = model(model_input)
-                                val_loss = loss_fn(model_output, gt)
-                                val_losses.append(val_loss)
+                        # with torch.no_grad():
+                        val_losses = []
+                        for (model_input, gt) in val_dataloader:
+                            if torch.cuda.is_available():
+                                model_input = {key: value.cuda() for key, value in model_input.items()}
+                                gt = {key: value.cuda() for key, value in gt.items()}
+                            model_output = model(model_input)
+                            val_loss = loss_fn(model_output, gt)
+                            val_losses.append(val_loss)
 
                             # writer.add_scalar("val_loss", np.mean(val_losses), total_steps)
                         scheduler.step(np.mean(val_losses))
